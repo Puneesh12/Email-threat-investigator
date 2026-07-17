@@ -1,0 +1,41 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environment
+backend/venv/
+.venv/
+venv/
+ENV/
+env/
+
+# Databases & local logs
+*.db
+*.db-journal
+*.sqlite
+backend/*.db
+logs/
+*.log
+
+# Node.js
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.npm
+.eslintcache
+
+# IDEs & System files
+.vscode/
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Credentials / Local configs
+.env
+.env.local
+.env.*.local

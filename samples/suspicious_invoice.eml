@@ -1,0 +1,52 @@
+From: "Billing Dept" <billing-alerts@secure-verify-invoice.com>
+To: jane.smith@mycompany.com
+Cc: accounting@mycompany.com
+Subject: URGENT: Outstanding Invoice #INV-887261 - Action Required
+Date: Fri, 17 Jul 2026 14:30:00 +0000
+Message-ID: <84729104.billing-alerts@secure-verify-invoice.com>
+Return-Path: <bounce@secure-verify-invoice.com>
+Reply-To: billing-reply@billing-queries-desk.com
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_NextPart_000_01C1_01D2"
+Received: from mail.secure-verify-invoice.com (mail.secure-verify-invoice.com [198.51.100.42])
+	by mx.mycompany.com with ESMTPS id o18si84920plb.82.2026.07.17.14.30.01
+	for <jane.smith@mycompany.com>;
+	Fri, 17 Jul 2026 14:30:02 +0000
+Received: from client-pc.local ([203.0.113.155])
+	by mail.secure-verify-invoice.com with ESMTP id t289js829a
+	for <jane.smith@mycompany.com>;
+	Fri, 17 Jul 2026 14:30:00 +0000
+
+------=_NextPart_000_01C1_01D2
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<html>
+<body>
+<p>Dear Customer,</p>
+<p>Please find attached your outstanding invoice <strong>#INV-887261</strong> for services rendered in Q2. As per our terms, payment was due on July 10, 2026.</p>
+<p>To avoid a 10% late fee fee, please wire the balance immediately. You can review the details in the attached PDF or log in to our secure billing portal below:</p>
+<p><a href="http://billing-portal-update.com/login?id=jane.smith@mycompany.com"><strong>Access Secure Billing Portal</strong></a></p>
+<p>Regards,<br>Billing Department</p>
+</body>
+</html>
+------=_NextPart_000_01C1_01D2
+Content-Type: application/pdf; name="Invoice_INV-887261.pdf"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="Invoice_INV-887261.pdf"
+
+JVBERi0xLjQKJcfsj6yzk5JVQ0UKMSAwIG9iagogIDw8IC9UeXBlIC9DYXRhbG9nCiAgICAg
+L1BhZ2VzIDIgMCBSCiAgPj4KZW5kb2JqCjIgMCBvYmoKICA8PCAvVHlwZSAvUGFnZXMKICAg
+ICAvS2lkcyBbIDMgMCBSIF0KICAgICAvQ291bnQgMQogID4+CmVuZG9iagozIDAgb2JqCiAg
+PDwgL1R5cGUgL1BhZ2UKICAgICAvUGFyZW50IDIgMCBSCiAgICAgL01lZGlhQm94IFsgMCAw
+IDU5NSA4NDIgXQogICAgIC9Db250ZW50cyA0IDAgUgogICAgIC9SZXNvdXJjZXMgPDwgL0Zv
+bnQgPDwgL0YxIDUgMCBSID4+ID4+CiAgPj4KZW5kb2JqCjQgMCBvYmoKICA8PCAvTGVuZ3Ro
+IDY0ID4+CnN0cmVhbQpCVAovRjEgMjQgVGYKMTAwIDcwMCBUZAooVGhpcyBpcyBhIGZha2Ug
+cGhpc2hpbmcgaW52b2ljZSBmb3IgdGVzdGluZy4pIFRqCkVOCmVuZHN0cmVhbQplbmRvYmoK
+NSAwIG9iagogIDw8IC9UeXBlIC9Gb250CiAgICAgL1N1YnR5cGUgL1R5cGUxCiAgICAgL0Jh
+c2VGb250IC9IZWx2ZXRpY2EKICA+PgplbmRvYmoKeHJlZgowIDYKMDAwMDAwMDAwMCA2NTUz
+NSBmIAowMDAwMDAwMDE5IDAwMDAwIG4gCjAwMDAwMDAwODUgMDAwMDAgbCAKMDAwMDAwMDE1
+NSAwMDAwMCBuIAowMDAwMDAwMjg0IDAwMDAwIG4gCjAwMDAwMDA0MDAwIDAwMDAwIG4gCnRy
+YWlsZXIKICA8PCAvU2l6ZSA2CiAgICAgL1Jvb3QgMSAwIFIKICA+PgpzdGFydHhyZWYKNDc1
+CiUlRU9GCg==
+------=_NextPart_000_01C1_01D2--

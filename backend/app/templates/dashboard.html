@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AegisMail - AI Email Threat Intelligence Platform</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              50: '#f0f7ff',
+              100: '#e0efff',
+              500: '#0078ff',
+              600: '#0062d1',
+              950: '#030712'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- React CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- Babel CDN for JSX parsing -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body {
+      background-color: #030712;
+      color: #f3f4f6;
+    }
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+    /* Glow Animations */
+    .glow-blue {
+      box-shadow: 0 0 20px -5px rgba(0, 120, 255, 0.2);
+    }
+    .glow-red {
+      box-shadow: 0 0 20px -5px rgba(239, 68, 68, 0.3);
+    }
+    .glow-purple {
+      box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.3);
+    }
+  </style>
+</head>
+<body class="font-sans antialiased bg-gray-950 text-gray-100 min-h-screen">
+  <div id="root"></div>
+
+  <!-- React JSX Code -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // Component: Icon Helper to dynamically render Lucide Icons
+    const Icon = ({ name, className = "w-5 h-5", size }) => {
+      useEffect(() => {
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      }, [name]);
+      return <i data-lucide={name} className={className} style={size ? {width: size, height: size} : {}}></i>;
+    };
+
+    // Main App Component
+    const App = () => {
+      const [activeTab, setActiveTab] = useState("dashboard");
+      const [investigations, setInvestigations] = useState([]);
+      const [stats, setStats] = useState({
+        total_cases: 0,
+        average_risk_score: 0,
+        malicious_ratio_percentage: 0,
+        distributions: { Low: 0, Medium: 0, High: 0, Critical: 0 }
+      });
+      const [selectedReport, setSelectedReport] = useState(null);
+      const [isUploading, setIsUploading] = useState(false);
+      const [rawHeadersInput, setRawHeadersInput] = useState("");
+      const [dragActive, setDragActive] = useState(false);
+      const [searchQuery, setSearchQuery] = useState("");
+      const [errorMsg, setErrorMsg] = useState("");
+
+      const API_BASE = "/api";
+
+      useEffect(() => {
+        fetchInvestigations();
+        fetchStats();
+      }, []);
+
+      const fetchInvestigations = async () => {
+        try {
+          const res = await fetch(`${API_BASE}/investigations`);
+          if (res.ok) {
+            const data = await res.json();
+            setInvestigations(data.items);
+          }
+        } catch (e) {
+          console.error("Error fetching investigations:", e);
+        }
+      };
+
+      const fetchStats = async () => {
+        try {
+          const res = await fetch(`${API_BASE}/investigations/stats`);
+          if (res.ok) {
+            const data = await res.json();
+            setStats(data);
+          }
+        } catch (e) {
+          console.error("Error fetching stats:", e);
+        }
+      };
+
+      const handleFileUpload = async (file) => {
+        if (!file) return;
+        setIsUploading(true);
+        setErrorMsg("");
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const res = await fetch(`${API_BASE}/upload/file`, {
+            method: "POST",
+            body: formData
+          });
+          if (res.ok) {
+            const report = await res.json();
+            setSelectedReport(report);
+            setActiveTab("investigate");
+            fetchInvestigations();
+            fetchStats();
+          } else {
+            const err = await res.json();
+            setErrorMsg(err.detail || "Failed to analyze the email file.");
+          }
+        } catch (e) {
+          setErrorMsg("Server connection failure.");
+        } finally {
+          setIsUploading(false);
+        }
+      };
+
+      const handleTextSubmit = async () => {
+        if (!rawHeadersInput.trim()) return;
+        setIsUploading(true);
+        setErrorMsg("");
+
+        try {
+          const res = await fetch(`${API_BASE}/upload/text`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ raw_text: rawHeadersInput })
+          });
+          if (res.ok) {
+            const report = await res.json();
+            setSelectedReport(report);
+            setRawHeadersInput("");
+            setActiveTab("investigate");
+            fetchInvestigations();
+            fetchStats();
+          } else {
+            const err = await res.json();
+            setErrorMsg(err.detail || "Failed to analyze raw email headers.");
+          }
+        } catch (e) {
+          setErrorMsg("Server connection failure.");
+        } finally {
+          setIsUploading(false);
+        }
+      };
+
+      const deleteCase = async (id, e) => {
+        e.stopPropagation();
+        if (!confirm("Are you sure you want to delete this investigation?")) return;
+        try {
+          const res = await fetch(`${API_BASE}/investigations/${id}`, {
+            method: "DELETE"
+          });
+          if (res.ok) {
+            if (selectedReport && selectedReport.id === id) {
+              setSelectedReport(null);
+            }
+            fetchInvestigations();
+            fetchStats();
+          }
+        } catch (e) {
+          console.error("Error deleting case:", e);
+        }
+      };
+
+      const handleDrag = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (e.type === "dragenter" || e.type === "dragover") {
+          setDragActive(true);
+        } else if (e.type === "dragleave") {
+          setDragActive(false);
+        }
+      };
+
+      const handleDrop = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setDragActive(false);
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          handleFileUpload(e.dataTransfer.files[0]);
+        }
+      };
+
+      // Helper to render colored badge for risk levels
+      const getRiskBadge = (level) => {
+        const styles = {
+          Critical: "bg-purple-500/10 text-purple-400 border border-purple-500/30 glow-purple",
+          High: "bg-red-500/10 text-red-400 border border-red-500/30 glow-red",
+          Medium: "bg-amber-500/10 text-amber-400 border border-amber-500/30",
+          Low: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+        };
+        return <span className={`px-2.5 py-1 rounded text-xs font-semibold tracking-wider ${styles[level] || styles.Low}`}>{level.toUpperCase()}</span>;
+      };
+
+      const getScoreColor = (score) => {
+        if (score >= 80) return "text-purple-400";
+        if (score >= 60) return "text-red-400";
+        if (score >= 30) return "text-amber-400";
+        return "text-emerald-400";
+      };
+
+      return (
+        <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 selection:bg-brand-500/30 selection:text-white">
+          
+          {/* Header */}
+          <header className="border-b border-slate-900 bg-slate-950/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-tr from-brand-600 to-blue-400 flex items-center justify-center font-bold text-white shadow-lg shadow-brand-500/10">
+                <Icon name="shield" className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <span className="font-bold text-lg tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-100 to-slate-400">AEGIS MAIL</span>
+                <span className="text-[10px] block tracking-widest text-brand-500 font-mono font-semibold uppercase leading-none">AI Threat Investigator</span>
+              </div>
+            </div>
+            
+            <nav className="flex gap-1.5 bg-slate-900/60 border border-slate-900 p-1 rounded-lg">
+              <button 
+                onClick={() => { setActiveTab("dashboard"); setSelectedReport(null); }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === "dashboard" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`}
+              >
+                <Icon name="layout-dashboard" className="w-4 h-4" /> Dashboard
+              </button>
+              <button 
+                onClick={() => setActiveTab("upload")}
+                className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === "upload" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`}
+              >
+                <Icon name="upload-cloud" className="w-4 h-4" /> EML Ingest
+              </button>
+              {selectedReport && (
+                <button 
+                  onClick={() => setActiveTab("investigate")}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition ${activeTab === "investigate" ? "bg-slate-800 text-white" : "text-slate-400 hover:text-white"}`}
+                >
+                  <Icon name="file-search" className="w-4 h-4" /> Active Analysis
+                </button>
+              )}
+            </nav>
+          </header>
+
+          <main className="flex-1 p-8 overflow-y-auto max-w-7xl mx-auto w-full">
+            {errorMsg && (
+              <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg flex items-center gap-3">
+                <Icon name="alert-triangle" className="w-5 h-5 text-red-400 shrink-0" />
+                <span className="text-sm font-medium">{errorMsg}</span>
+              </div>
+            )}
+
+            {/* TAB: DASHBOARD */}
+            {activeTab === "dashboard" && (
+              <div className="space-y-8 animate-fadeIn">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                  <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl relative overflow-hidden group hover:border-slate-800 transition">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-brand-500/5 rounded-bl-full transition group-hover:bg-brand-500/10"></div>
+                    <span className="text-slate-400 text-xs font-mono font-semibold uppercase tracking-widest block mb-1">TOTAL INVESTIGATIONS</span>
+                    <span className="text-4xl font-extrabold font-mono tracking-tight text-white">{stats.total_cases}</span>
+                  </div>
+                  
+                  <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl relative overflow-hidden group hover:border-slate-800 transition">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-purple-500/5 rounded-bl-full transition group-hover:bg-purple-500/10"></div>
+                    <span className="text-slate-400 text-xs font-mono font-semibold uppercase tracking-widest block mb-1">AVG RISK SCORE</span>
+                    <span className="text-4xl font-extrabold font-mono tracking-tight text-white">{stats.average_risk_score}</span>
+                    <span className="text-xs text-slate-500 block mt-1">out of 100 max</span>
+                  </div>
+
+                  <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl relative overflow-hidden group hover:border-slate-800 transition">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-bl-full transition group-hover:bg-red-500/10"></div>
+                    <span className="text-slate-400 text-xs font-mono font-semibold uppercase tracking-widest block mb-1">MALICIOUS RATIO</span>
+                    <span className="text-4xl font-extrabold font-mono tracking-tight text-red-400">{stats.malicious_ratio_percentage}%</span>
+                    <span className="text-xs text-slate-500 block mt-1">High & Critical cases</span>
+                  </div>
+
+                  <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl border-dashed flex flex-col justify-center items-center hover:bg-slate-900/40 hover:border-slate-800 transition cursor-pointer" onClick={() => setActiveTab("upload")}>
+                    <div className="w-10 h-10 rounded-full bg-brand-500/10 flex items-center justify-center text-brand-400 mb-2">
+                      <Icon name="plus" className="w-6 h-6" />
+                    </div>
+                    <span className="text-sm font-semibold text-slate-300">Scan New Email</span>
+                  </div>
+                </div>
+
+                {/* Risk Distribution Chart Summary */}
+                <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl">
+                  <h3 className="text-md font-semibold mb-6 flex items-center gap-2">
+                    <Icon name="activity" className="text-brand-400 w-5 h-5" /> Threat Profile Distribution
+                  </h3>
+                  <div className="grid grid-cols-4 gap-4">
+                    {["Critical", "High", "Medium", "Low"].map(level => {
+                      const count = stats.distributions[level] || 0;
+                      const pct = stats.total_cases > 0 ? (count / stats.total_cases) * 100 : 0;
+                      const colors = {
+                        Critical: "bg-purple-500",
+                        High: "bg-red-500",
+                        Medium: "bg-amber-500",
+                        Low: "bg-emerald-500"
+                      };
+                      return (
+                        <div key={level} className="bg-slate-950/40 border border-slate-900 p-4 rounded-lg flex flex-col justify-between">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold font-mono tracking-wider text-slate-400">{level.toUpperCase()}</span>
+                            <span className="text-sm font-mono font-bold text-white">{count}</span>
+                          </div>
+                          <div className="w-full bg-slate-900 h-2 rounded-full overflow-hidden">
+                            <div className={`${colors[level]} h-full`} style={{width: `${pct}%`}}></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* History Table */}
+                <div className="bg-slate-900/60 border border-slate-900 rounded-xl overflow-hidden">
+                  <div className="p-6 border-b border-slate-900 flex items-center justify-between">
+                    <h3 className="text-md font-semibold flex items-center gap-2">
+                      <Icon name="list" className="text-brand-400 w-5 h-5" /> Previous SOC Investigations
+                    </h3>
+                    <div className="relative">
+                      <Icon name="search" className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                      <input 
+                        type="text" 
+                        placeholder="Search by sender or subject..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="bg-slate-950 border border-slate-900 rounded-lg pl-9 pr-4 py-1.5 text-xs text-slate-300 w-64 focus:outline-none focus:border-brand-500"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-left">
+                      <thead>
+                        <tr className="border-b border-slate-900 text-xs font-semibold text-slate-400 font-mono tracking-wider uppercase bg-slate-950/30">
+                          <th className="p-4">Risk Severity</th>
+                          <th className="p-4">Sender</th>
+                          <th className="p-4">Subject</th>
+                          <th className="p-4">Date Sent</th>
+                          <th className="p-4">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-900/60">
+                        {investigations
+                          .filter(item => {
+                            if (!searchQuery) return true;
+                            return item.sender.includes(searchQuery.toLowerCase()) || 
+                                   (item.subject && item.subject.toLowerCase().includes(searchQuery.toLowerCase()));
+                          })
+                          .map((item) => (
+                          <tr 
+                            key={item.id} 
+                            onClick={() => { setSelectedReport(item.full_report_json); setActiveTab("investigate"); }}
+                            className="hover:bg-slate-900/30 transition cursor-pointer group"
+                          >
+                            <td className="p-4 flex items-center gap-3">
+                              <span className={`text-md font-bold font-mono ${getScoreColor(item.risk_score)}`}>{item.risk_score}</span>
+                              {getRiskBadge(item.risk_level)}
+                            </td>
+                            <td className="p-4 text-sm font-mono text-slate-300 max-w-[200px] truncate">{item.sender}</td>
+                            <td className="p-4 text-sm font-medium text-slate-200 group-hover:text-brand-400 transition truncate max-w-[320px]">{item.subject || "No Subject"}</td>
+                            <td className="p-4 text-xs font-mono text-slate-500">{item.date_sent || "Unknown"}</td>
+                            <td className="p-4">
+                              <button 
+                                onClick={(e) => deleteCase(item.id, e)}
+                                className="text-slate-500 hover:text-red-400 p-1.5 hover:bg-red-500/10 rounded transition"
+                              >
+                                <Icon name="trash-2" className="w-4 h-4" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                        {investigations.length === 0 && (
+                          <tr>
+                            <td colSpan="5" className="p-8 text-center text-slate-500 text-sm font-mono">
+                              No investigations recorded. Ingest a .eml file to get started.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* TAB: UPLOAD / INGEST */}
+            {activeTab === "upload" && (
+              <div className="max-w-2xl mx-auto space-y-8 animate-fadeIn">
+                <div className="text-center">
+                  <h2 className="text-2xl font-bold text-white mb-2">Ingest Suspicious Email</h2>
+                  <p className="text-slate-400 text-sm">Upload standard EML files or paste raw SMTP headers for immediate SOC evaluation.</p>
+                </div>
+
+                {isUploading ? (
+                  <div className="bg-slate-900/60 border border-slate-900 rounded-xl p-12 text-center flex flex-col items-center justify-center gap-4 glow-blue">
+                    <div className="w-12 h-12 border-t-2 border-brand-500 border-r-2 border-transparent rounded-full animate-spin"></div>
+                    <span className="text-sm font-medium text-brand-400 font-mono">Parsing MIME structure & querying Threat Intelligence APIs...</span>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Drag & Drop File */}
+                    <div 
+                      onDragEnter={handleDrag} 
+                      onDragOver={handleDrag} 
+                      onDragLeave={handleDrag} 
+                      onDrop={handleDrop}
+                      className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition flex flex-col items-center gap-4 ${dragActive ? "border-brand-500 bg-brand-500/5 glow-blue" : "border-slate-800 bg-slate-900/20 hover:border-slate-700 hover:bg-slate-900/40"}`}
+                    >
+                      <input 
+                        type="file" 
+                        id="eml-file" 
+                        accept=".eml,.txt" 
+                        onChange={(e) => handleFileUpload(e.target.files[0])}
+                        className="hidden" 
+                      />
+                      <label htmlFor="eml-file" className="cursor-pointer flex flex-col items-center gap-3">
+                        <div className="w-14 h-14 rounded-full bg-slate-900 flex items-center justify-center border border-slate-800 text-slate-400 group-hover:text-white transition">
+                          <Icon name="upload-cloud" className="w-8 h-8" />
+                        </div>
+                        <div>
+                          <span className="block text-sm font-bold text-slate-200">Drag EML file here or click to browse</span>
+                          <span className="block text-xs text-slate-500 font-mono mt-1">Accepts .eml and raw text files</span>
+                        </div>
+                      </label>
+                    </div>
+
+                    {/* Separator */}
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="flex-1 h-[1px] bg-slate-900"></div>
+                      <span className="text-[10px] font-bold font-mono tracking-widest text-slate-600 uppercase">OR</span>
+                      <div className="flex-1 h-[1px] bg-slate-900"></div>
+                    </div>
+
+                    {/* Raw headers box */}
+                    <div className="bg-slate-900/40 border border-slate-900 p-6 rounded-xl space-y-4">
+                      <label className="text-xs font-semibold text-slate-400 font-mono tracking-wider uppercase block">PASTE RAW EMAIL HEADERS / MIME TEXT</label>
+                      <textarea
+                        rows="8"
+                        placeholder="Paste complete raw headers starting with 'From: ' or full raw MIME content..."
+                        value={rawHeadersInput}
+                        onChange={(e) => setRawHeadersInput(e.target.value)}
+                        className="w-full bg-slate-950 border border-slate-900 rounded-lg p-4 text-xs font-mono text-slate-300 focus:outline-none focus:border-brand-500"
+                      ></textarea>
+                      <button 
+                        onClick={handleTextSubmit}
+                        disabled={!rawHeadersInput.trim()}
+                        className="w-full bg-brand-500 hover:bg-brand-600 text-white font-semibold py-2.5 rounded-lg text-sm transition shadow-lg shadow-brand-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        Execute Analysis
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* TAB: ACTIVE INVESTIGATION */}
+            {activeTab === "investigate" && selectedReport && (
+              <div className="space-y-8 animate-fadeIn">
+                
+                {/* Header Summary Grid */}
+                <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-xl font-bold text-white truncate max-w-[500px]">
+                        {selectedReport.parsed_email.envelope.subject || "No Subject"}
+                      </h2>
+                      {getRiskBadge(selectedReport.risk_assessment.level)}
+                    </div>
+                    <p className="text-xs text-slate-400 font-mono">
+                      From: <span className="text-slate-300 font-bold">{selectedReport.parsed_email.envelope.sender.name || "Unknown"}</span> &lt;{selectedReport.parsed_email.envelope.sender.email}&gt;
+                    </p>
+                    <p className="text-[10px] text-slate-500 font-mono">
+                      Message-ID: {selectedReport.parsed_email.envelope.message_id || "None"}
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center gap-8 border-l border-slate-900 pl-8 shrink-0">
+                    <div className="text-center">
+                      <span className="text-[10px] font-semibold text-slate-500 font-mono uppercase tracking-wider block">RISK SCORE</span>
+                      <span className={`text-4xl font-extrabold font-mono ${getScoreColor(selectedReport.risk_assessment.score)}`}>
+                        {selectedReport.risk_assessment.score}
+                      </span>
+                    </div>
+                    
+                    <div className="text-center">
+                      <span className="text-[10px] font-semibold text-slate-500 font-mono uppercase tracking-wider block">CONFIDENCE</span>
+                      <span className="text-3xl font-extrabold font-mono text-slate-300">
+                        {selectedReport.risk_assessment.confidence_score}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sub Tab selection */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* Left Column: Metrics & Indicators */}
+                  <div className="md:col-span-2 space-y-8">
+                    
+                    {/* Domain Authentications */}
+                    <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl">
+                      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                        <Icon name="key-round" className="text-brand-400 w-4 h-4" /> Domain Authentications (DMARC)
+                      </h3>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* SPF */}
+                        <div className="bg-slate-950/50 border border-slate-900 p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-mono font-semibold text-slate-400">SPF</span>
+                            <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${selectedReport.auth_validation.spf.status === "Pass" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+                              {selectedReport.auth_validation.spf.status}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono block truncate mb-1">
+                            Domain: {selectedReport.auth_validation.summary.return_path_domain}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono leading-relaxed block italic">
+                            "{selectedReport.auth_validation.spf.detail}"
+                          </span>
+                        </div>
+
+                        {/* DKIM */}
+                        <div className="bg-slate-950/50 border border-slate-900 p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-mono font-semibold text-slate-400">DKIM</span>
+                            <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${selectedReport.auth_validation.dkim.status === "Pass" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+                              {selectedReport.auth_validation.dkim.status}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono block truncate mb-1">
+                            Domain: {selectedReport.auth_validation.summary.dkim_domain || "None"}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono leading-relaxed block italic">
+                            "{selectedReport.auth_validation.dkim.detail}"
+                          </span>
+                        </div>
+
+                        {/* DMARC */}
+                        <div className="bg-slate-950/50 border border-slate-900 p-4 rounded-lg">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-mono font-semibold text-slate-400">DMARC Alignment</span>
+                            <span className={`text-xs font-bold font-mono px-2 py-0.5 rounded ${selectedReport.auth_validation.dmarc.status === "Pass" ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-red-500/10 text-red-400 border border-red-500/20"}`}>
+                              {selectedReport.auth_validation.dmarc.status}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-mono block truncate mb-1">
+                            Policy: {selectedReport.auth_validation.dmarc.policy.toUpperCase()}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-mono leading-relaxed block italic">
+                            "{selectedReport.auth_validation.dmarc.detail}"
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Received Hop Chain Trace */}
+                    <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl">
+                      <h3 className="text-sm font-semibold mb-6 flex items-center gap-2">
+                        <Icon name="git-commit" className="text-brand-400 w-4 h-4" /> Received Mail Hop Path
+                      </h3>
+                      
+                      <div className="space-y-6 relative border-l border-slate-800 ml-4 pl-6">
+                        {selectedReport.parsed_email.hops.map((hop, index) => {
+                          const isOrigin = index === 0;
+                          const isDest = index === selectedReport.parsed_email.hops.length - 1;
+                          return (
+                            <div key={hop.hop_index} className="relative">
+                              {/* Timeline dot */}
+                              <div className={`absolute -left-[31px] w-4.5 h-4.5 rounded-full border border-slate-900 flex items-center justify-center ${isOrigin ? "bg-red-500 text-white" : isDest ? "bg-brand-500" : "bg-slate-800"}`}>
+                                <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                              </div>
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-xs font-mono font-bold text-slate-300">HOP {hop.hop_index}</span>
+                                  {isOrigin && <span className="bg-red-500/15 text-red-400 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Origin Source</span>}
+                                  {isDest && <span className="bg-brand-500/15 text-brand-400 text-[10px] px-1.5 py-0.5 rounded font-mono font-bold uppercase tracking-wider">Gateway Recipient</span>}
+                                </div>
+                                <p className="text-xs text-slate-400 font-mono">
+                                  From Host: <span className="text-slate-300 font-bold">{hop.from_host || "Unknown"}</span> 
+                                  {hop.from_ip && <span className="text-slate-400 ml-1">[{hop.from_ip}]</span>}
+                                </p>
+                                <p className="text-[10px] text-slate-500 font-mono">
+                                  By: {hop.by_host || "Internal gateway"} | Time: {hop.timestamp_raw}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Threat Intelligence Tab Summary */}
+                    <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl">
+                      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                        <Icon name="search-code" className="text-brand-400 w-4 h-4" /> Extracted Indicators of Compromise (IOCs)
+                      </h3>
+
+                      <div className="space-y-4">
+                        {/* IPs */}
+                        {selectedReport.ioc_extraction.raw.ips.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-bold font-mono tracking-widest text-slate-500 uppercase block">IP ADDRESSES ({selectedReport.ioc_extraction.raw.ips.length})</span>
+                            <div className="divide-y divide-slate-900 bg-slate-950/40 rounded-lg border border-slate-900">
+                              {selectedReport.ioc_extraction.raw.ips.map(ip => {
+                                const rep = selectedReport.threat_intelligence.ips[ip] || {};
+                                return (
+                                  <div key={ip} className="p-3 flex items-center justify-between text-xs font-mono">
+                                    <span className="text-slate-300 font-semibold">{selectedReport.ioc_extraction.defanged.ips[selectedReport.ioc_extraction.raw.ips.indexOf(ip)]}</span>
+                                    <div className="flex items-center gap-3">
+                                      <span className="text-slate-500">{rep.isp || "Unknown ISP"}</span>
+                                      {rep.is_malicious ? (
+                                        <span className="text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded font-bold font-mono">Malicious ({rep.abuse_score}%)</span>
+                                      ) : (
+                                        <span className="text-slate-500 bg-slate-900 px-2 py-0.5 rounded">Unreported</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* URLs */}
+                        {selectedReport.ioc_extraction.raw.urls.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-bold font-mono tracking-widest text-slate-500 uppercase block">REFERENCED LINKS ({selectedReport.ioc_extraction.raw.urls.length})</span>
+                            <div className="divide-y divide-slate-900 bg-slate-950/40 rounded-lg border border-slate-900">
+                              {selectedReport.ioc_extraction.raw.urls.map(url => {
+                                const rep = selectedReport.threat_intelligence.urls[url] || {};
+                                return (
+                                  <div key={url} className="p-3 flex items-center justify-between text-xs font-mono">
+                                    <span className="text-slate-300 font-semibold truncate max-w-[400px]" title={url}>
+                                      {selectedReport.ioc_extraction.defanged.urls[selectedReport.ioc_extraction.raw.urls.indexOf(url)]}
+                                    </span>
+                                    <div className="flex items-center gap-3">
+                                      {rep.is_malicious ? (
+                                        <span className="text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded font-bold font-mono">Phishing Link</span>
+                                      ) : (
+                                        <span className="text-slate-500 bg-slate-900 px-2 py-0.5 rounded">Unreported</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Attachments */}
+                        {selectedReport.parsed_email.attachments.length > 0 && (
+                          <div className="space-y-2">
+                            <span className="text-[10px] font-bold font-mono tracking-widest text-slate-500 uppercase block">ATTACHMENTS ({selectedReport.parsed_email.attachments.length})</span>
+                            <div className="divide-y divide-slate-900 bg-slate-950/40 rounded-lg border border-slate-900">
+                              {selectedReport.parsed_email.attachments.map(att => {
+                                const rep = selectedReport.threat_intelligence.hashes[att.sha256] || {};
+                                return (
+                                  <div key={att.filename} className="p-3 flex items-center justify-between text-xs font-mono">
+                                    <div className="flex items-center gap-2">
+                                      <Icon name="file" className="w-4 h-4 text-brand-400" />
+                                      <span className="text-slate-300 font-bold">{att.filename}</span>
+                                      <span className="text-slate-500 text-[10px]">({Math.round(att.size_bytes / 1024)} KB)</span>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                      {rep.is_malicious ? (
+                                        <span className="text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded font-bold font-mono">Malicious ({rep.positives}/{rep.total_scans})</span>
+                                      ) : (
+                                        <span className="text-slate-500 bg-slate-900 px-2 py-0.5 rounded">Clean</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* MITRE ATT&CK Map */}
+                    <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl">
+                      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                        <Icon name="swords" className="text-brand-400 w-4 h-4" /> MITRE ATT&CK Mapping
+                      </h3>
+
+                      <div className="space-y-4">
+                        {selectedReport.mitre_mapping.map(tech => (
+                          <div key={tech.id} className="bg-slate-950/50 border border-slate-900 p-4 rounded-lg flex items-start gap-4">
+                            <div className="bg-brand-500/10 border border-brand-500/20 text-brand-400 text-xs font-mono font-bold px-2.5 py-1 rounded shrink-0">
+                              {tech.id}
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-white">{tech.name}</span>
+                                <span className="text-[10px] text-slate-500 font-mono font-bold uppercase tracking-wider">{tech.tactic}</span>
+                              </div>
+                              <p className="text-xs text-slate-400 leading-relaxed">{tech.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                        {selectedReport.mitre_mapping.length === 0 && (
+                          <p className="text-xs font-mono text-slate-500 text-center py-4">No threat techniques matched for this email structure.</p>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* Right Column: AI Assistant Report */}
+                  <div className="space-y-8">
+                    
+                    {/* Dynamic Risk Breakdown Card */}
+                    <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl">
+                      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                        <Icon name="shield-alert" className="text-brand-400 w-4 h-4" /> Risk Score Contributors
+                      </h3>
+                      <div className="space-y-3 divide-y divide-slate-900">
+                        {selectedReport.risk_assessment.contributors.map((contrib, i) => (
+                          <div key={i} className="pt-3 first:pt-0 flex justify-between items-start gap-4">
+                            <div className="space-y-1">
+                              <span className="text-[10px] font-bold font-mono tracking-widest text-slate-500 uppercase">{contrib.category}</span>
+                              <p className="text-xs text-slate-300 font-medium leading-relaxed">{contrib.reason}</p>
+                            </div>
+                            <span className="text-xs font-mono font-bold text-red-400 shrink-0">+{contrib.score_added}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* AI Security Analyst Notes */}
+                    <div className="bg-slate-900/60 border border-slate-900 p-6 rounded-xl relative overflow-hidden group">
+                      {/* Glow effect */}
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/5 rounded-bl-full select-none pointer-events-none"></div>
+                      
+                      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2">
+                        <Icon name="sparkles" className="text-brand-400 w-4 h-4 animate-pulse" /> AI Security Analyst Notes
+                      </h3>
+
+                      <div className="bg-slate-950/60 border border-slate-900 rounded-lg p-5 text-xs text-slate-300 font-sans leading-relaxed whitespace-pre-line space-y-4 max-h-[600px] overflow-y-auto">
+                        {selectedReport.metadata.analyst_notes_markdown}
+                      </div>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+            )}
+          </main>
+        </div>
+      );
+    };
+
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>

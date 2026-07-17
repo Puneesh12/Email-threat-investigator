@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-slate-100 min-h-screen selection:bg-brand-500/30 selection:text-white;
+  }
+}
+
+/* Custom styles and animations */
+.glow-blue {
+  box-shadow: 0 0 20px -5px rgba(0, 120, 255, 0.2);
+}
+.glow-red {
+  box-shadow: 0 0 20px -5px rgba(239, 68, 68, 0.3);
+}
+.glow-purple {
+  box-shadow: 0 0 20px -5px rgba(168, 85, 247, 0.3);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out forwards;
+}
