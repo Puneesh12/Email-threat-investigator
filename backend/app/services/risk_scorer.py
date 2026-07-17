@@ -7,7 +7,7 @@ class RiskScorer:
     """
     Risk Scoring Engine.
     Aggregates findings from auth checks, BEC scans, spoof analysis, and threat intel
-    to calculate a dynamic risk score (0-100), severity level, and confidence level.
+    to calculate a dynamic risk score (0-100) and severity level.
     """
 
     def calculate_score(
@@ -18,11 +18,10 @@ class RiskScorer:
         attachments: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
-        Calculates risk score, severity, and confidence.
+        Calculates risk score and severity level.
         """
         score = 0
         contributors = []
-        confidence_points = []
 
         # ----------------------------------------------------
         # 1. Authentication Checks (Max 25 pts)
@@ -54,9 +53,7 @@ class RiskScorer:
                 "reason": "SPF validation failed. Sending IP is not authorized by the domain's SPF record."
             })
 
-        # Confidence contribution
-        if dmarc_status != "None":
-            confidence_points.append(15)  # explicit DMARC status increases investigation confidence
+
 
         # ----------------------------------------------------
         # 2. Spoof & Impersonation Checks (Max 40 pts)
@@ -129,7 +126,6 @@ class RiskScorer:
                     "category": "Threat Intelligence",
                     "reason": f"Extracted IP {ip} flagged in AbuseIPDB with abuse score: {abuse_score}%."
                 })
-                confidence_points.append(20)
 
         # File Hash Reputation
         for f_hash, data in hashes.items():
@@ -140,7 +136,6 @@ class RiskScorer:
                     "category": "Threat Intelligence",
                     "reason": f"Attachment hash is flagged as malicious on VirusTotal ({data.get('positives')}/{data.get('total_scans')} engines)."
                 })
-                confidence_points.append(30)
 
         # URL Reputation
         for url, data in urls.items():
@@ -151,7 +146,6 @@ class RiskScorer:
                     "category": "Threat Intelligence",
                     "reason": f"Extracted URL is flagged as malicious on VirusTotal ({data.get('vt_positives')} engines)."
                 })
-                confidence_points.append(25)
 
         # Domain registration age (WHOIS)
         for dom, data in domains.items():
@@ -162,7 +156,6 @@ class RiskScorer:
                     "category": "Threat Intelligence",
                     "reason": f"Domain '{dom}' was registered recently ({data.get('age_days')} days ago). Common for phishing."
                 })
-                confidence_points.append(15)
 
         # ----------------------------------------------------
         # 4. Attachment Properties (Max 15 pts)
@@ -195,14 +188,8 @@ class RiskScorer:
         else:
             level = "Low"
 
-        # Calculate Confidence Score (0-100)
-        # Base confidence is 40. Each intelligence indicator or auth check adds confidence. Max 100.
-        base_confidence = 40
-        confidence = min(base_confidence + sum(confidence_points), 100)
-
         return {
             "score": final_score,
             "level": level,
-            "confidence_score": confidence,
             "contributors": contributors
         }

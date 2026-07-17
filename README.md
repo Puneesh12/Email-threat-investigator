@@ -39,7 +39,7 @@ email-threat-investigator/
 │   │   │   ├── spoof_detector.py# Impersonation & BEC Scanner
 │   │   │   ├── ioc_extractor.py # Regex extractor & defanger
 │   │   │   ├── threat_intel.py  # VT, URLScan, WHOIS, AbuseIPDB
-│   │   │   ├── risk_scorer.py   # Dynamic risk/confidence calculation
+│   │   │   ├── risk_scorer.py   # Dynamic threat risk calculation
 │   │   │   ├── mitre_mapper.py  # MITRE ATT&CK technique compiler
 │   │   │   └── ai_assistant.py  # LLM (Gemini/OpenAI) orchestration
 │   │   └── tests/               # 17 Unit & Integration tests
